@@ -420,14 +420,14 @@ const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).
 
 function drawSurvival(base, ibge, band){
   const svg=document.getElementById("survChart"); svg.innerHTML="";
-  const W=760,H=330,m={l:48,r:16,t:16,b:40}, iw=W-m.l-m.r, ih=H-m.t-m.b, tMax=10;
+  const W=Math.max(320,Math.round(svg.clientWidth||760)),H=W<560?290:330,m={l:40,r:12,t:16,b:40}, iw=W-m.l-m.r, ih=H-m.t-m.b, tMax=10; svg.setAttribute("viewBox",`0 0 ${W} ${H}`); const narrow=W<560;
   const x=t=>m.l+t/tMax*iw, y=s=>m.t+(1-s)*ih;
   // term shading
   svg.appendChild(el("rect",{x:x(T_POSSE),y:m.t,width:x(T_END)-x(T_POSSE),height:ih,fill:css("--accent-soft"),opacity:.55}));
   svg.appendChild(el("text",{x:(x(T_POSSE)+x(T_END))/2,y:m.t+14,"text-anchor":"middle",class:"lbl",style:"font-weight:600"},"Mandato 2027–2031"));
   // grid
   for(let s=0;s<=1.0001;s+=0.2){svg.appendChild(el("line",{x1:m.l,x2:W-m.r,y1:y(s),y2:y(s),stroke:css("--rule"),"stroke-width":1}));svg.appendChild(el("text",{x:m.l-8,y:y(s)+4,"text-anchor":"end"},Math.round(s*100)+"%"));}
-  for(let yr=2027;yr<=2036;yr++){const t=yr-T0_CAL;if(t<0||t>tMax)continue;svg.appendChild(el("line",{x1:x(t),x2:x(t),y1:y(0),y2:y(0)+5,stroke:css("--muted")}));svg.appendChild(el("text",{x:x(t),y:y(0)+18,"text-anchor":"middle"},yr));svg.appendChild(el("text",{x:x(t),y:y(0)+31,"text-anchor":"middle",style:"font-size:10px;opacity:.75"},Math.floor(AGE0+t)+"a"));}
+  for(let yr=2027;yr<=2036;yr++){const t=yr-T0_CAL;if(t<0||t>tMax)continue;if(narrow&&yr%2===0)continue;svg.appendChild(el("line",{x1:x(t),x2:x(t),y1:y(0),y2:y(0)+5,stroke:css("--muted")}));svg.appendChild(el("text",{x:x(t),y:y(0)+18,"text-anchor":"middle"},yr));svg.appendChild(el("text",{x:x(t),y:y(0)+31,"text-anchor":"middle",style:"font-size:10px;opacity:.75"},Math.floor(AGE0+t)+"a"));}
   // band
   if(band){let d="";band.lo.forEach(([t,s],i)=>d+=(i?"L":"M")+x(t)+","+y(s));for(let i=band.hi.length-1;i>=0;i--){const[t,s]=band.hi[i];d+="L"+x(t)+","+y(s);}svg.appendChild(el("path",{d:d+"Z",fill:css("--band"),stroke:"none"}));}
   const line=(c,col,w,dash)=>{let d="";c.forEach(([t,s],i)=>d+=(i?"L":"M")+x(t).toFixed(1)+","+y(s).toFixed(1));svg.appendChild(el("path",{d,fill:"none",stroke:col,"stroke-width":w,"stroke-dasharray":dash||""}));};
@@ -477,18 +477,20 @@ function termP(p){const r=run(p,T_END,1/26,false);return 1-r.sE/r.sP;}
 function drawTornado(p, center){
   const svg=document.getElementById("tornado"); svg.innerHTML="";
   const items = ALL.filter(c=>c.id!=="sig").map(c=>{const a=termP({...p,[c.id]:c.min}),b=termP({...p,[c.id]:c.max});return{c,lo:Math.min(a,b),hi:Math.max(a,b),atMin:a,atMax:b};}).sort((u,v)=>(v.hi-v.lo)-(u.hi-u.lo));
-  const W=760,rowH=32,m={l:250,r:60,t:24,b:28},H=m.t+m.b+rowH*items.length; svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  const W=Math.max(320,Math.round(svg.clientWidth||760)),narrow=W<560,rowH=narrow?44:32,m=narrow?{l:34,r:40,t:24,b:28}:{l:250,r:60,t:24,b:28},H=m.t+m.b+rowH*items.length; svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  const bt=narrow?18:6, bh=narrow?rowH-24:rowH-12;
   const lo=Math.min(...items.map(i=>i.lo)),hi=Math.max(...items.map(i=>i.hi));
   const a=Math.floor(lo*20)/20,b=Math.ceil(hi*20)/20, iw=W-m.l-m.r, x=v=>m.l+(v-a)/(b-a)*iw;
   for(let v=a;v<=b+1e-9;v+=0.05){svg.appendChild(el("line",{x1:x(v),x2:x(v),y1:m.t-6,y2:H-m.b,stroke:css("--rule")}));svg.appendChild(el("text",{x:x(v),y:H-8,"text-anchor":"middle"},Math.round(v*100)+"%"));}
   items.forEach((it,i)=>{const yy=m.t+i*rowH;
-    const lab=it.c.label.length>34?it.c.label.slice(0,33)+"…":it.c.label;
-    svg.appendChild(el("text",{x:m.l-10,y:yy+rowH/2+4,"text-anchor":"end",class:"lbl"},lab));
-    // decreasing side (blue) and increasing side (red)
-    svg.appendChild(el("rect",{x:x(it.lo),y:yy+6,width:Math.max(1,x(center)-x(it.lo)),height:rowH-12,fill:css("--safe"),opacity:.8}));
-    svg.appendChild(el("rect",{x:x(center),y:yy+6,width:Math.max(1,x(it.hi)-x(center)),height:rowH-12,fill:css("--hazard"),opacity:.85}));
-    svg.appendChild(el("text",{x:x(it.hi)+6,y:yy+rowH/2+4},fN(it.hi*100,1)));
-    svg.appendChild(el("text",{x:x(it.lo)-6,y:yy+rowH/2+4,"text-anchor":"end"},fN(it.lo*100,1)));
+    const lab=narrow?it.c.label:(it.c.label.length>34?it.c.label.slice(0,33)+"…":it.c.label);
+    if(narrow) svg.appendChild(el("text",{x:4,y:yy+13,class:"lbl"},lab.length>46?lab.slice(0,45)+"…":lab));
+    else svg.appendChild(el("text",{x:m.l-10,y:yy+rowH/2+4,"text-anchor":"end",class:"lbl"},lab));
+    const ty=yy+bt+bh/2+4;
+    svg.appendChild(el("rect",{x:x(it.lo),y:yy+bt,width:Math.max(1,x(center)-x(it.lo)),height:bh,fill:css("--safe"),opacity:.8}));
+    svg.appendChild(el("rect",{x:x(center),y:yy+bt,width:Math.max(1,x(it.hi)-x(center)),height:bh,fill:css("--hazard"),opacity:.85}));
+    svg.appendChild(el("text",{x:x(it.hi)+5,y:ty},fN(it.hi*100,1)));
+    svg.appendChild(el("text",{x:x(it.lo)-5,y:ty,"text-anchor":"end"},fN(it.lo*100,1)));
   });
   svg.appendChild(el("line",{x1:x(center),x2:x(center),y1:m.t-10,y2:H-m.b,stroke:css("--ink"),"stroke-width":1.5}));
   svg.appendChild(el("text",{x:x(center),y:m.t-12,"text-anchor":"middle",class:"lbl",style:"font-weight:600"},"atual "+fP(center)));
@@ -503,11 +505,13 @@ function drawBench(model, ibge){
     {l:"Biden/Trump 2024 (Olshansky, ~75% sobrevivem)",v:0.25,c:css("--rule")},
     {l:"Trump 2024 (Brookings, tábua SSA)",v:0.27,c:css("--rule")}
   ];
-  const W=760,rowH=36,m={l:330,r:60,t:6,b:10},iw=W-m.l-m.r,mx=Math.max(0.5,Math.ceil(Math.max(...rows.map(r=>r.v))*10)/10);
-  rows.forEach((r,i)=>{const yy=m.t+i*rowH;
-    svg.appendChild(el("text",{x:m.l-10,y:yy+rowH/2+4,"text-anchor":"end",class:"lbl",style:r.bold?"font-weight:600":""},r.l));
-    svg.appendChild(el("rect",{x:m.l,y:yy+8,width:iw*r.v/mx,height:rowH-16,fill:r.c,rx:2}));
-    svg.appendChild(el("text",{x:m.l+iw*r.v/mx+6,y:yy+rowH/2+4,style:r.bold?"fill:var(--ink);font-weight:500":""},fP(r.v)));
+  const W=Math.max(320,Math.round(svg.clientWidth||760)),narrow=W<560,rowH=narrow?46:36,m=narrow?{l:4,r:52,t:6,b:6}:{l:330,r:60,t:6,b:10},iw=W-m.l-m.r,mx=Math.max(0.5,Math.ceil(Math.max(...rows.map(r=>r.v))*10)/10);
+  svg.setAttribute("viewBox",`0 0 ${W} ${m.t+m.b+rowH*rows.length}`);
+  rows.forEach((r,i)=>{const yy=m.t+i*rowH, by=narrow?yy+19:yy+8, bh=narrow?16:rowH-16;
+    if(narrow) svg.appendChild(el("text",{x:4,y:yy+13,class:"lbl",style:r.bold?"font-weight:600":""},r.l));
+    else svg.appendChild(el("text",{x:m.l-10,y:yy+rowH/2+4,"text-anchor":"end",class:"lbl",style:r.bold?"font-weight:600":""},r.l));
+    svg.appendChild(el("rect",{x:m.l,y:by,width:iw*r.v/mx,height:bh,fill:r.c,rx:2}));
+    svg.appendChild(el("text",{x:m.l+iw*r.v/mx+6,y:by+bh/2+4,style:r.bold?"fill:var(--ink);font-weight:500":""},fP(r.v)));
   });
 }
 
@@ -557,6 +561,7 @@ function update(){
   drawTable(P);
 }
 syncInputs(); markPreset(); update();
+let lastW=window.innerWidth; window.addEventListener("resize",()=>{if(Math.abs(window.innerWidth-lastW)>40){lastW=window.innerWidth;schedule();}});
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",update);
 new MutationObserver(update).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 })();
