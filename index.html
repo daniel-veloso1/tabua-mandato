@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Modelo atuarial interativo: probabilidade de óbito de Lula no mandato 2027–2031, com tábua IBGE 2024, fatores de risco ajustáveis e Monte Carlo.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tábua do Mandato 2027–2031">
+<meta property="og:description" content="Modelo atuarial interativo da probabilidade de óbito de Lula durante o novo mandato. Ajuste as premissas e veja o resultado.">
+<meta name="theme-color" content="#1f5e7a">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Tábua do Mandato 2027–2031</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ledger-style actuarial worksheet — result strip on top, controls left / charts right, methodology as an appendix */
+:root{
+  --bg:#eef1f2; --panel:#ffffff; --ink:#15222b; --muted:#5b6a74; --rule:#d3dadd;
+  --accent:#1f5e7a; --accent-soft:#d8e7ee; --hazard:#b4432f; --hazard-soft:#f3dcd6; --safe:#2e7d5b; --band:rgba(31,94,122,.16);
+  --f-display:"Spectral",Georgia,"Times New Roman",serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f161b; --panel:#162129; --ink:#e3eaee; --muted:#93a4ae; --rule:#2a3a44;
+  --accent:#6fb3d2; --accent-soft:#1d3846; --hazard:#e58b77; --hazard-soft:#3d2520; --safe:#6cc79d; --band:rgba(111,179,210,.18); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161b; --panel:#162129; --ink:#e3eaee; --muted:#93a4ae; --rule:#2a3a44;
+  --accent:#6fb3d2; --accent-soft:#1d3846; --hazard:#e58b77; --hazard-soft:#3d2520; --safe:#6cc79d; --band:rgba(111,179,210,.18); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;font-weight:600}
+h1{font-size:clamp(28px,4vw,42px);line-height:1.1}
+h2{font-size:22px}
+h3{font-size:16px;font-family:var(--f-body);font-weight:600}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+p{margin:0}
+.muted{color:var(--muted)}
+header{display:flex;flex-direction:column;gap:8px}
+header .sub{max-width:72ch;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:18px}
+/* result strip */
+.results{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:0;padding:0;overflow:hidden}
+.results>div{padding:18px;border-right:1px solid var(--rule);display:flex;flex-direction:column;gap:4px;min-width:0}
+.results>div:last-child{border-right:none}
+.hero-num{font-family:var(--f-display);font-size:clamp(44px,6vw,64px);line-height:1;color:var(--hazard);font-weight:700}
+.big{font-family:var(--f-mono);font-size:26px;font-weight:500}
+.ci{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.meter{height:8px;background:var(--hazard-soft);border-radius:4px;position:relative;margin-top:6px}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--hazard);border-radius:4px}
+.meter b{position:absolute;top:-3px;bottom:-3px;border-left:2px solid var(--ink);opacity:.55}
+@media (max-width:900px){.results{grid-template-columns:1fr 1fr}.results>div:nth-child(2){border-right:none}.results>div:nth-child(-n+2){border-bottom:1px solid var(--rule)}}
+@media (max-width:480px){.results{grid-template-columns:1fr}.results>div{border-right:none;border-bottom:1px solid var(--rule)}}
+/* main grid */
+.main{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:960px){.main{grid-template-columns:1fr}}
+.controls{display:flex;flex-direction:column;gap:18px;position:sticky;top:max(12px,env(safe-area-inset-top,0px))}
+@media (max-width:960px){.controls{position:static}}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font:500 13px var(--f-body);padding:6px 10px;border-radius:4px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);cursor:pointer}
+.presets button:hover{border-color:var(--accent)}
+.presets button.on{background:var(--accent);color:var(--panel);border-color:var(--accent)}
+.presets button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.group{display:flex;flex-direction:column;gap:12px}
+.group+.group{border-top:1px solid var(--rule);padding-top:14px}
+.ctl{display:flex;flex-direction:column;gap:3px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-size:14px;font-weight:500}
+.ctl output{font-family:var(--f-mono);font-size:14px;color:var(--accent);white-space:nowrap}
+.ctl .note{font-size:12px;color:var(--muted);line-height:1.4}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+.hrtotal{display:flex;justify-content:space-between;align-items:baseline;background:var(--accent-soft);padding:10px 12px;border-radius:4px}
+.hrtotal span:last-child{font-family:var(--f-mono);font-size:18px;font-weight:500}
+.charts{display:flex;flex-direction:column;gap:20px;min-width:0}
+.chart-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline;margin-bottom:8px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+svg .lbl{fill:var(--ink);font-family:var(--f-body);font-size:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+/* profile + method */
+.profile{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media (max-width:760px){.profile{grid-template-columns:1fr}}
+.timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.timeline li{display:grid;grid-template-columns:88px 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.timeline li span:first-child{font-family:var(--f-mono);color:var(--muted);font-size:13px}
+.prose{max-width:75ch;display:flex;flex-direction:column;gap:12px}
+.formula{font-family:var(--f-mono);font-size:13.5px;background:var(--bg);border:1px solid var(--rule);border-radius:4px;padding:12px 14px;overflow-x:auto;white-space:pre;line-height:1.7}
+details{border-top:1px solid var(--rule);padding-top:12px}
+summary{cursor:pointer;font-family:var(--f-display);font-size:20px;font-weight:600}
+ol.refs{padding-left:20px;margin:12px 0 0;display:flex;flex-direction:column;gap:6px;font-size:13.5px;max-width:95ch}
+a{color:var(--accent)}
+.disclaimer{font-size:12.5px;color:var(--muted);max-width:90ch}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--f-mono)}
+@media (prefers-reduced-motion:no-preference){.meter i{transition:width .25s ease}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Modelo atuarial · tábua de vida ajustada por riscos proporcionais</span>
+    <h1>Probabilidade de óbito de Lula no mandato 2027–2031</h1>
+    <p class="sub">Luiz Inácio Lula da Silva, nascido em 27/10/1945, reeleito em 25/10/2026. Posse em 05/01/2027 (EC 111/2021), fim do mandato em 05/01/2031. Base: Tábua Completa de Mortalidade IBGE 2024, homens, ajustada por fatores de risco individuais. Mexa nos controles para ver o efeito de cada premissa.</p>
+  </header>
+
+  <section class="panel results" aria-live="polite">
+    <div>
+      <span class="eyebrow">Óbito durante o mandato</span>
+      <span class="hero-num" id="rTerm">–</span>
+      <span class="ci" id="rTermCI">IC 90%: –</span>
+      <div class="meter" title="Barra: modelo. Marca: homem brasileiro médio de 81 anos (IBGE 2024)"><i id="mFill"></i><b id="mMark"></b></div>
+      <span class="ci" id="rRef">Homem médio 81 anos (IBGE): –</span>
+    </div>
+    <div>
+      <span class="eyebrow">Sobrevive ao mandato</span>
+      <span class="big" id="rSurv">–</span>
+      <span class="ci">idade no fim: 85,2 anos</span>
+    </div>
+    <div>
+      <span class="eyebrow">Óbito antes da posse</span>
+      <span class="big" id="rPre">–</span>
+      <span class="ci">27/10/2026 → 05/01/2027</span>
+    </div>
+    <div>
+      <span class="eyebrow">Expectativa de vida</span>
+      <span class="big" id="rLE">–</span>
+      <span class="ci" id="rLE2">IBGE puro: –</span>
+    </div>
+  </section>
+
+  <div class="main">
+    <aside class="panel controls" aria-label="Premissas do modelo">
+      <div class="group">
+        <h3>Cenários prontos</h3>
+        <div class="presets" id="presets"></div>
+      </div>
+      <div id="ctlGroups"></div>
+      <div class="hrtotal"><span>Multiplicador total de risco (HR)</span><span id="hrTotal">–</span></div>
+    </aside>
+
+    <div class="charts">
+      <section class="panel">
+        <div class="chart-head">
+          <h2>Curva de sobrevivência</h2>
+          <div class="legend">
+            <span><i style="background:var(--accent)"></i>Modelo</span>
+            <span><i style="background:var(--band);height:8px"></i>IC 90% (Monte Carlo)</span>
+            <span><i style="background:var(--muted)"></i>IBGE 2024 puro</span>
+          </div>
+        </div>
+        <svg id="survChart" viewBox="0 0 760 330" role="img" aria-label="Curva de sobrevivência de hoje até 2036"></svg>
+      </section>
+
+      <div class="two">
+        <section class="panel">
+          <div class="chart-head"><h2>Risco por ano de mandato</h2></div>
+          <p class="muted" style="font-size:13px;margin-bottom:6px">Probabilidade de óbito em cada ano, dado que chegou vivo ao início dele.</p>
+          <svg id="yearChart" viewBox="0 0 360 250" role="img" aria-label="Probabilidade de óbito por ano"></svg>
+        </section>
+        <section class="panel">
+          <div class="chart-head"><h2>Distribuição da incerteza</h2></div>
+          <p class="muted" style="font-size:13px;margin-bottom:6px">Monte Carlo: cada fator varia em escala log com o desvio escolhido.</p>
+          <svg id="histChart" viewBox="0 0 360 250" role="img" aria-label="Histograma de probabilidades simuladas"></svg>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="chart-head">
+          <h2>Sensibilidade (tornado)</h2>
+          <span class="muted" style="font-size:13px">Cada premissa no mínimo e no máximo do seu intervalo, demais fixas</span>
+        </div>
+        <svg id="tornado" viewBox="0 0 760 400" role="img" aria-label="Gráfico tornado de sensibilidade"></svg>
+      </section>
+
+      <section class="panel">
+        <div class="chart-head"><h2>Comparações</h2><span class="muted" style="font-size:13px">Probabilidade de óbito em um mandato de 4 anos</span></div>
+        <svg id="benchChart" viewBox="0 0 760 210" role="img" aria-label="Comparação com referências"></svg>
+        <p class="disclaimer" style="margin-top:8px">Referências externas usam tábuas dos EUA (SSA) e idades diferentes: Biden tinha 82 e Trump 78 anos no início do mandato hipotético. Servem como ordem de grandeza.</p>
+      </section>
+
+      <section class="panel">
+        <div class="chart-head"><h2>Tábua ajustada do mandato</h2></div>
+        <div class="tablewrap"><table id="lifeTable"></table></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel profile">
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <h2>Perfil clínico público</h2>
+      <ul class="timeline">
+        <li><span>1945</span><span>Nasce em 27/10, Caetés (PE). Completa 81 anos hoje.</span></li>
+        <li><span>~1960–2011</span><span>Fumante por cerca de 50 anos; abandona o cigarro no tratamento do câncer.</span></li>
+        <li><span>out/2011</span><span>Câncer de laringe. Quimioterapia e radioterapia no Sírio-Libanês; remissão completa anunciada em 2012. Rouquidão residual.</span></li>
+        <li><span>2020, 2022</span><span>Covid-19 duas vezes, sem internação.</span></li>
+        <li><span>2021</span><span>Internação de cerca de 4 dias por bacteremia.</span></li>
+        <li><span>nov/2022</span><span>Remoção de leucoplasia na laringe; biópsia sem sinais de tumor.</span></li>
+        <li><span>set/2023</span><span>Artroplastia total do quadril direito por artrose.</span></li>
+        <li><span>19/10/2024</span><span>Queda no banheiro do Alvorada, trauma na região occipital, pontos.</span></li>
+        <li><span>10/12/2024</span><span>Cirurgia de emergência para drenar hematoma subdural de cerca de 3 cm (hemorragia intracraniana ligada à queda).</span></li>
+        <li><span>12/12/2024</span><span>Procedimento endovascular para interromper o fluxo na artéria meníngea média e prevenir novo sangramento. Sem sequelas neurológicas relatadas.</span></li>
+        <li><span>mar/2026</span><span>Check-up anual no Sírio-Libanês: todos os exames normais.</span></li>
+        <li><span>2026</span><span>Campanha nacional completa em dois turnos. Reeleito com 51,79% dos votos válidos.</span></li>
+      </ul>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <h2>Datas e idades do modelo</h2>
+      <dl class="kv">
+        <dt>Data de referência</dt><dd>27/10/2026 (idade 81,00)</dd>
+        <dt>Posse</dt><dd>05/01/2027 (idade 81,19)</dd>
+        <dt>Fim do mandato</dt><dd>05/01/2031 (idade 85,19)</dd>
+        <dt>Duração</dt><dd>4,00 anos (1.461 dias)</dd>
+        <dt>q81 IBGE 2024 (homens)</dt><dd>68,1‰</dd>
+        <dt>q85 IBGE 2024 (homens)</dt><dd>104,6‰</dd>
+        <dt>e81 IBGE 2024 (homens)</dt><dd>7,8 anos</dd>
+      </dl>
+      <p class="disclaimer">O modelo usa apenas informação pública. Boletins médicos divulgam o que a Presidência decide divulgar; condições não informadas (pressão, colesterol, função renal, medicações) ficam implícitas no fator de estado funcional e na seleção socioeconômica.</p>
+      <p class="disclaimer">Variáveis com mais peso no tornado, a partir das premissas-base: seleção socioeconômica, estado funcional, efeito do cargo e hematoma de 2024. O hematoma aparece alto pelo intervalo amplo do controle (até HR 1,8); no valor-base, com recuperação sem sequelas, ele adiciona pouco.</p>
+    </div>
+  </section>
+
+  <section class="panel prose" style="max-width:none">
+    <details open>
+      <summary>Metodologia</summary>
+      <div class="prose" style="margin-top:12px">
+        <p><strong>1. Tábua base.</strong> Probabilidades anuais de morte q<sub>x</sub> da Tábua Completa de Mortalidade IBGE 2024, sexo masculino. Cada q<sub>x</sub> vira uma força de mortalidade constante no ano de idade, μ<sub>x</sub> = −ln(1 − q<sub>x</sub>). Acima de 89 anos (o IBGE fecha em 90+), a força é extrapolada por uma lei de Gompertz ajustada às idades 80–89 (ln μ linear na idade).</p>
+        <p><strong>2. Melhoria de mortalidade.</strong> Fator (1 − m)<sup>(ano − 2024,5)</sup>, no espírito de Lee &amp; Carter (1992) e das escalas de melhoria usadas em tábuas geracionais. Em idades de 80+ a melhoria histórica no Brasil fica em torno de 1% ao ano.</p>
+        <p><strong>3. Correção da tábua.</strong> A literatura demográfica brasileira aponta má declaração de idade em idosos, o que tende a subestimar a mortalidade em idades altas. O controle permite inflar a tábua inteira.</p>
+        <p><strong>4. Riscos proporcionais.</strong> Cada condição entra como hazard ratio (HR) multiplicativo, como num modelo de Cox. Os HRs clínicos são combinados e depois atenuados por um expoente α ≤ 1, porque riscos relativos encolhem em idades avançadas (Prospective Studies Collaboration, 2002) e porque fatores correlacionados não somam de forma independente. O efeito do cargo vale só enquanto ele está no exercício do mandato.</p>
+        <p><strong>5. Risco extrínseco.</strong> Uma força aditiva anual (acidente, violência), independente da idade.</p>
+        <div class="formula">μ*(t) = HR_sel · HR_cargo(t) · (Π HR_clínico)^α · c · μ_IBGE(81 + t) · (1 − m)^(ano(t) − 2024,5) + λ_ext
+
+S(t) = exp( −∫₀ᵗ μ*(u) du )          (passo semanal)
+
+P(óbito no mandato) = 1 − S(t_fim) / S(t_posse)</div>
+        <p><strong>6. Incerteza.</strong> Monte Carlo com 2.000 sorteios. Cada HR recebe um choque log-normal independente, ln HR ~ N(ln HR̂, σ²). O intervalo mostrado é o percentil 5–95 das probabilidades simuladas.</p>
+        <p><strong>Calibração dos HRs-base.</strong> Seleção socioeconômica 0,70: o gap de expectativa de vida entre o 1% mais rico e a média nos EUA (Chetty et al., 2016) e o acesso ao Sírio-Libanês equivalem a reduzir a força de mortalidade em 25–45%. Cargo 1,10: Olenski, Abola &amp; Jena (BMJ, 2015) acham 23% a mais de risco de morte prematura em eleitos versus derrotados; Shavelle et al. (2008) acham SMR 1,4 durante o mandato e 1,0 depois; Olshansky (2011) não acha envelhecimento acelerado. O valor-base fica abaixo dessas estimativas porque parte do efeito vem de causas violentas, tratadas à parte. Ex-tabagismo 1,20: quem parou após os 60 recupera parte, não todo, o risco (Doll et al., 2004; Jha et al., 2013). Câncer de laringe 1,10: sobreviventes de longo prazo de câncer de cabeça e pescoço morrem mais de segundos tumores primários e doenças cardiopulmonares (Baxi et al., 2014). Hematoma subdural 1,15: hematoma subdural crônico em idosos tem mortalidade de longo prazo acima da população (Miranda et al., 2011), atenuada aqui pela recuperação completa. Estado funcional 0,85: velocidade de marcha e desempenho físico predizem sobrevida em idosos (Studenski et al., 2011); uma campanha presidencial de dois turnos aos 80 anos indica reserva funcional acima da média.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Referências</summary>
+      <ol class="refs">
+        <li>IBGE. <a href="https://biblioteca.ibge.gov.br/visualizacao/periodicos/3097/tcmb_2024.pdf" target="_blank" rel="noopener">Tábua Completa de Mortalidade para o Brasil – 2024</a>. Rio de Janeiro, 2025. Cópia tabular: <a href="https://www.lifetable.de/File/GetDocument/data/BRA/BRA000020242024CU1.pdf" target="_blank" rel="noopener">Human Life-Table Database</a>.</li>
+        <li>Gompertz, B. (1825). On the nature of the function expressive of the law of human mortality. <em>Phil. Trans. R. Soc.</em> 115:513–583. Makeham, W. (1860). <em>J. Inst. Actuaries</em> 8:301–310.</li>
+        <li>Lee, R. &amp; Carter, L. (1992). Modeling and forecasting U.S. mortality. <em>JASA</em> 87(419):659–671.</li>
+        <li>Cox, D. R. (1972). Regression models and life-tables. <em>J. R. Stat. Soc. B</em> 34(2):187–220.</li>
+        <li>Olenski, A. R., Abola, M. V. &amp; Jena, A. B. (2015). Do heads of government age more quickly? Observational study comparing mortality between elected leaders and runners-up in national elections of 17 countries. <em>BMJ</em> 351:h6424. Resumo: <a href="https://www.cbsnews.com/news/heads-of-government-face-risk-of-earlier-death" target="_blank" rel="noopener">CBS News</a>.</li>
+        <li>Olshansky, S. J. (2011). Aging of US presidents. <em>JAMA</em> 306(21):2328–2329.</li>
+        <li>Shavelle, R. M. et al. (2008). Análise de SMR de presidentes dos EUA por período. Resumida em <a href="https://www.lifeexpectancy.org/articles/potus.pdf" target="_blank" rel="noopener">lifeexpectancy.org</a>.</li>
+        <li>Chetty, R. et al. (2016). The association between income and life expectancy in the United States, 2001–2014. <em>JAMA</em> 315(16):1750–1766.</li>
+        <li>Doll, R. et al. (2004). Mortality in relation to smoking: 50 years' observations on male British doctors. <em>BMJ</em> 328:1519.</li>
+        <li>Jha, P. et al. (2013). 21st-century hazards of smoking and benefits of cessation in the United States. <em>NEJM</em> 368:341–350.</li>
+        <li>Baxi, S. S. et al. (2014). Causes of death in long-term survivors of head and neck cancer. <em>Cancer</em> 120(10):1507–1513.</li>
+        <li>Miranda, L. B. et al. (2011). Chronic subdural hematoma in the elderly: not a benign disease. <em>J. Neurosurg.</em> 114(1):72–76.</li>
+        <li>Studenski, S. et al. (2011). Gait speed and survival in older adults. <em>JAMA</em> 305(1):50–58.</li>
+        <li>Rockwood, K. &amp; Mitnitski, A. (2007). Frailty in relation to the accumulation of deficits. <em>J. Gerontol. A</em> 62(7):722–727.</li>
+        <li>Prospective Studies Collaboration (2002). Age-specific relevance of usual blood pressure to vascular mortality. <em>Lancet</em> 360:1903–1913.</li>
+        <li>Gomes, M. M. F. &amp; Turra, C. M. (2009). The number of centenarians in Brazil: indirect estimates based on death certificates. <em>Demographic Research</em> 20:495–502.</li>
+        <li>Brookings (2024). <a href="https://www.brookings.edu/articles/is-biden-too-old-to-be-president-is-trump" target="_blank" rel="noopener">Is Biden too old to be president? Is Trump?</a> · States Newsroom (2024). <a href="https://idahocapitalsun.com/2024/02/17/worried-biden-and-trump-are-too-old-to-be-president-calm-down-experts-on-aging-say/" target="_blank" rel="noopener">Entrevista com S. J. Olshansky</a>.</li>
+        <li>Eleição e posse: <a href="https://www.tre-sp.jus.br/comunicacao/noticias/2026/Outubro/eleicoes-2026-lula-e-reeleito-presidente-da-republica-confira-resultado-do-2o-turno-em-sp" target="_blank" rel="noopener">TRE-SP</a>, <a href="https://www.vaticannews.va/pt/mundo/news/2026-10/lula-reeleito-presidente-brasil-segundo-turno.html" target="_blank" rel="noopener">Vatican News</a>, <a href="https://www.dgabc.com.br/Noticia/4354471/presidente-toma-posse-em-5-de-janeiro-de-2027-governadores-no-dia-6" target="_blank" rel="noopener">DGABC (EC 111/2021)</a>.</li>
+        <li>Histórico clínico: <a href="https://www.poder360.com.br/poder-governo/saiba-quais-sao-os-problemas-de-saude-ja-enfrentados-por-lula/" target="_blank" rel="noopener">Poder360</a>, <a href="https://istoe.com.br/os-problemas-de-saude-de-lula" target="_blank" rel="noopener">IstoÉ</a>, <a href="https://www.aosfatos.org/noticias/o-que-se-sabe-cirurgia-de-lula/" target="_blank" rel="noopener">Aos Fatos</a>, <a href="https://www.poder360.com.br/poder-governo/tomografia-de-lula-aponta-reabsorcao-de-hemorragia-diz-boletim/" target="_blank" rel="noopener">Poder360 (boletim 31/12/2024)</a>, <a href="https://www.aol.com/articles/brazil-president-lulas-annual-medical-171307350.html" target="_blank" rel="noopener">Reuters/AOL (check-up 2026)</a>.</li>
+      </ol>
+    </details>
+    <p class="disclaimer">Exercício estatístico com dados públicos. Não é avaliação médica nem previsão sobre uma pessoa específica: o resultado descreve a frequência esperada de óbito numa população hipotética de homens com o mesmo perfil.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+// ---------- Data: IBGE 2024, males, q(x) per mil ----------
+const Q = {75:40.068,76:44.063,77:48.295,78:52.670,79:57.265,80:62.284,81:68.133,82:75.207,83:83.731,84:93.706,85:104.583,86:115.551,87:125.683,88:134.282,89:141.486};
+const MU = {}; for (const a in Q) MU[a] = -Math.log(1 - Q[a]/1000);
+// Gompertz fit on ages 80–89: ln mu = a + b*x
+(function(){
+  let xs=[],ys=[]; for(let x=80;x<=89;x++){xs.push(x);ys.push(Math.log(MU[x]));}
+  const n=xs.length, mx=xs.reduce((s,v)=>s+v,0)/n, my=ys.reduce((s,v)=>s+v,0)/n;
+  let sxy=0,sxx=0; for(let i=0;i<n;i++){sxy+=(xs[i]-mx)*(ys[i]-my);sxx+=(xs[i]-mx)**2;}
+  const b=sxy/sxx, a=my-b*mx; window.__gomp={a,b};
+})();
+const G = window.__gomp;
+function muBase(age){
+  const x=Math.floor(age);
+  if (x<=89) return MU[Math.max(75,x)];
+  return Math.min(Math.exp(G.a+G.b*age), 3);
+}
+// ---------- Timeline ----------
+const T0_CAL = 2026 + (300/365); // 27/10/2026 ≈ day 300
+const AGE0 = 81.0;
+const T_POSSE = 70/365.25;          // 27/10/2026 → 05/01/2027
+const T_END = T_POSSE + 1461/365.25; // → 05/01/2031
+
+// ---------- Controls ----------
+const CTL = [
+ {g:"Tábua base", items:[
+  {id:"imp",label:"Melhoria anual da mortalidade",min:0,max:2.5,step:0.1,def:1.0,fmt:v=>v.toFixed(1)+"% a.a.",note:"Queda esperada da mortalidade por calendário (Lee-Carter). 0 = tábua estática de 2024.",unit:"pct"},
+  {id:"cal",label:"Correção da tábua em idades altas",min:0.9,max:1.4,step:0.01,def:1.05,fmt:v=>"×"+v.toFixed(2),note:"Compensa subestimação da mortalidade de idosos por má declaração de idade."}
+ ]},
+ {g:"Seleção e cargo", items:[
+  {id:"sel",label:"Seleção socioeconômica e acesso médico",min:0.4,max:1.1,step:0.01,def:0.70,fmt:v=>"HR "+v.toFixed(2),note:"Elite com acesso a hospital de ponta tem mortalidade bem abaixo da média nacional (Chetty 2016).",hr:1},
+  {id:"office",label:"Efeito do cargo (estresse, agenda)",min:0.8,max:1.5,step:0.01,def:1.10,fmt:v=>"HR "+v.toFixed(2),note:"Jena/BMJ 2015: +23% em eleitos vs. derrotados. Shavelle: SMR 1,4 no mandato. Olshansky: sem efeito.",hr:1}
+ ]},
+ {g:"Condições clínicas", items:[
+  {id:"smoke",label:"Ex-tabagista (~50 anos, parou ~2011)",min:1.0,max:1.7,step:0.01,def:1.20,fmt:v=>"HR "+v.toFixed(2),note:"Parar após os 60 recupera só parte do risco (Doll 2004; Jha 2013).",hr:1,clin:1},
+  {id:"cancer",label:"Câncer de laringe (2011, em remissão)",min:1.0,max:1.5,step:0.01,def:1.10,fmt:v=>"HR "+v.toFixed(2),note:"15 anos sem recidiva. Excesso residual por segundo tumor primário (Baxi 2014).",hr:1,clin:1},
+  {id:"tbi",label:"Hematoma subdural / queda (2024)",min:1.0,max:1.8,step:0.01,def:1.15,fmt:v=>"HR "+v.toFixed(2),note:"Drenado e embolizado, sem sequelas. Hematoma crônico em idosos eleva mortalidade (Miranda 2011).",hr:1,clin:1},
+  {id:"msk",label:"Artrose / prótese de quadril (2023)",min:0.9,max:1.4,step:0.01,def:1.03,fmt:v=>"HR "+v.toFixed(2),note:"Artroplastia bem-sucedida tem pouco impacto; queda de 2024 sugere algum risco de novas quedas.",hr:1,clin:1},
+  {id:"func",label:"Estado funcional / vitalidade",min:0.6,max:1.5,step:0.01,def:0.85,fmt:v=>"HR "+v.toFixed(2),note:"Campanha completa aos 80 e check-up normal em 2026 indicam boa reserva (Studenski 2011).",hr:1,clin:1},
+  {id:"att",label:"Atenuação dos riscos com a idade (α)",min:0.5,max:1.0,step:0.01,def:0.80,fmt:v=>"α "+v.toFixed(2),note:"Expoente sobre o produto dos HRs clínicos. 1 = efeitos independentes e integrais."}
+ ]},
+ {g:"Outros riscos e incerteza", items:[
+  {id:"ext",label:"Risco extrínseco anual (acidente, violência)",min:0,max:0.5,step:0.01,def:0.03,fmt:v=>v.toFixed(2)+"% a.a.",note:"Força aditiva, independente da idade."},
+  {id:"sig",label:"Incerteza dos HRs (σ em log)",min:0,max:0.4,step:0.01,def:0.15,fmt:v=>"σ "+v.toFixed(2),note:"Largura do Monte Carlo. 0,15 ≈ ±30% no HR em 95% dos casos."}
+ ]}
+];
+const ALL = CTL.flatMap(g=>g.items);
+const DEF = Object.fromEntries(ALL.map(c=>[c.id,c.def]));
+const PRESETS = {
+  "Base": {...DEF},
+  "Otimista": {imp:1.5,cal:1.0,sel:0.60,office:1.0,smoke:1.10,cancer:1.03,tbi:1.03,msk:1.0,func:0.75,att:0.70,ext:0.01,sig:0.15},
+  "Conservador": {imp:0.7,cal:1.10,sel:0.82,office:1.20,smoke:1.30,cancer:1.20,tbi:1.30,msk:1.10,func:1.00,att:0.90,ext:0.05,sig:0.15},
+  "Só a tábua IBGE": {imp:0,cal:1.0,sel:1,office:1,smoke:1,cancer:1,tbi:1,msk:1,func:1,att:1,ext:0,sig:0}
+};
+let P = {...DEF};
+
+// ---------- Model ----------
+function totalHR(p){
+  const clin = p.smoke*p.cancer*p.tbi*p.msk*p.func;
+  return {pre: p.sel*Math.pow(clin,p.att), office:p.office};
+}
+// Step grid that lands exactly on posse and end
+function grid(dtTarget,tMax){
+  const pts=[0,T_POSSE,T_END,tMax].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b);
+  const g=[0]; for(let i=1;i<pts.length;i++){const span=pts[i]-pts[i-1],n=Math.max(1,Math.round(span/dtTarget));for(let k=1;k<=n;k++)g.push(pts[i-1]+span*k/n);}
+  return g;
+}
+function run(p, tMax, dtTarget, wantCurve){
+  const g = grid(dtTarget, tMax), h=totalHR(p), imp=p.imp/100, ext=p.ext/100;
+  let H=0, curve = wantCurve?[[0,1]]:null, sP=1, sE=1, le=0;
+  for(let i=1;i<g.length;i++){
+    const t0=g[i-1], t1=g[i], tm=(t0+t1)/2, step=t1-t0;
+    const off = tm < T_END ? h.office : 1;
+    const mu = h.pre*off*p.cal*muBase(AGE0+tm)*Math.pow(1-imp, T0_CAL+tm-2024.5) + ext;
+    const S0=Math.exp(-H); H += mu*step; const S1=Math.exp(-H);
+    le += (S0+S1)/2*step;
+    if (Math.abs(t1-T_POSSE)<1e-9) sP=S1;
+    if (Math.abs(t1-T_END)<1e-9) sE=S1;
+    if (curve) curve.push([t1,S1]);
+  }
+  return {sP,sE,curve,le,S:Math.exp(-H)};
+}
+function survAt(curve,t){ // linear interpolation
+  for(let i=1;i<curve.length;i++) if(curve[i][0]>=t){const [a,sa]=curve[i-1],[b,sb]=curve[i];return sa+(sb-sa)*(t-a)/(b-a);} return curve[curve.length-1][1];
+}
+// RNG
+let seed=12345; function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
+function gauss(){let u=0,v=0;while(u===0)u=rnd();v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const HR_KEYS = ALL.filter(c=>c.hr).map(c=>c.id);
+function monteCarlo(p,n){
+  seed=12345; const out=[], curves=[];
+  for(let i=0;i<n;i++){
+    const q={...p}; for(const k of HR_KEYS) q[k]=p[k]*Math.exp(p.sig*gauss());
+    const r=run(q, 10, 1/12, true);
+    out.push(1-r.sE/r.sP); curves.push(r.curve);
+  }
+  return {out,curves};
+}
+function pct(arr,q){const a=[...arr].sort((x,y)=>x-y);const i=(a.length-1)*q,lo=Math.floor(i),hi=Math.ceil(i);return a[lo]+(a[hi]-a[lo])*(i-lo);}
+
+// ---------- Formatting ----------
+const fP = v => (v*100).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})+"%";
+const fY = v => v.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})+" anos";
+const fN = (v,d=2) => v.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+
+// ---------- Build controls ----------
+const host = document.getElementById("ctlGroups");
+for (const g of CTL){
+  const div=document.createElement("div"); div.className="group";
+  div.innerHTML = `<h3>${g.g}</h3>` + g.items.map(c=>`
+    <div class="ctl">
+      <div class="row"><label for="c_${c.id}">${c.label}</label><output id="o_${c.id}" for="c_${c.id}"></output></div>
+      <input type="range" id="c_${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.def}">
+      <span class="note">${c.note}</span>
+    </div>`).join("");
+  host.appendChild(div);
+}
+const pre = document.getElementById("presets");
+for (const name in PRESETS){
+  const b=document.createElement("button"); b.type="button"; b.textContent=name; b.dataset.p=name;
+  b.addEventListener("click",()=>{P={...PRESETS[name]}; syncInputs(); markPreset(); update();});
+  pre.appendChild(b);
+}
+function markPreset(){
+  for(const b of pre.children){const ps=PRESETS[b.dataset.p];b.classList.toggle("on",ALL.every(c=>Math.abs(ps[c.id]-P[c.id])<1e-9));}
+}
+function syncInputs(){ for(const c of ALL){document.getElementById("c_"+c.id).value=P[c.id];document.getElementById("o_"+c.id).textContent=c.fmt(P[c.id]);} }
+for (const c of ALL){
+  document.getElementById("c_"+c.id).addEventListener("input",e=>{P[c.id]=parseFloat(e.target.value);document.getElementById("o_"+c.id).textContent=c.fmt(P[c.id]);markPreset();schedule();});
+}
+let raf=null; function schedule(){ if(raf) cancelAnimationFrame(raf); raf=requestAnimationFrame(update); }
+
+// ---------- SVG helpers ----------
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,txt){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(txt!=null)e.textContent=txt;return e;}
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function drawSurvival(base, ibge, band){
+  const svg=document.getElementById("survChart"); svg.innerHTML="";
+  const W=760,H=330,m={l:48,r:16,t:16,b:40}, iw=W-m.l-m.r, ih=H-m.t-m.b, tMax=10;
+  const x=t=>m.l+t/tMax*iw, y=s=>m.t+(1-s)*ih;
+  // term shading
+  svg.appendChild(el("rect",{x:x(T_POSSE),y:m.t,width:x(T_END)-x(T_POSSE),height:ih,fill:css("--accent-soft"),opacity:.55}));
+  svg.appendChild(el("text",{x:(x(T_POSSE)+x(T_END))/2,y:m.t+14,"text-anchor":"middle",class:"lbl",style:"font-weight:600"},"Mandato 2027–2031"));
+  // grid
+  for(let s=0;s<=1.0001;s+=0.2){svg.appendChild(el("line",{x1:m.l,x2:W-m.r,y1:y(s),y2:y(s),stroke:css("--rule"),"stroke-width":1}));svg.appendChild(el("text",{x:m.l-8,y:y(s)+4,"text-anchor":"end"},Math.round(s*100)+"%"));}
+  for(let yr=2027;yr<=2036;yr++){const t=yr-T0_CAL;if(t<0||t>tMax)continue;svg.appendChild(el("line",{x1:x(t),x2:x(t),y1:y(0),y2:y(0)+5,stroke:css("--muted")}));svg.appendChild(el("text",{x:x(t),y:y(0)+18,"text-anchor":"middle"},yr));svg.appendChild(el("text",{x:x(t),y:y(0)+31,"text-anchor":"middle",style:"font-size:10px;opacity:.75"},Math.floor(AGE0+t)+"a"));}
+  // band
+  if(band){let d="";band.lo.forEach(([t,s],i)=>d+=(i?"L":"M")+x(t)+","+y(s));for(let i=band.hi.length-1;i>=0;i--){const[t,s]=band.hi[i];d+="L"+x(t)+","+y(s);}svg.appendChild(el("path",{d:d+"Z",fill:css("--band"),stroke:"none"}));}
+  const line=(c,col,w,dash)=>{let d="";c.forEach(([t,s],i)=>d+=(i?"L":"M")+x(t).toFixed(1)+","+y(s).toFixed(1));svg.appendChild(el("path",{d,fill:"none",stroke:col,"stroke-width":w,"stroke-dasharray":dash||""}));};
+  line(ibge,css("--muted"),1.5,"5 4");
+  line(base,css("--accent"),2.5);
+  // markers
+  for(const [t,lab] of [[T_POSSE,"posse"],[T_END,"fim"]]){const s=survAt(base,t);svg.appendChild(el("circle",{cx:x(t),cy:y(s),r:4.5,fill:css("--accent"),stroke:css("--panel"),"stroke-width":2}));svg.appendChild(el("text",{x:x(t)+(lab==="fim"?8:8),y:y(s)-(lab==="fim"?-16:8),class:"lbl"},lab+" "+fP(s)));}
+}
+
+function drawYears(p){
+  const svg=document.getElementById("yearChart"); svg.innerHTML="";
+  const W=360,H=250,m={l:40,r:8,t:22,b:30},iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const ib={...PRESETS["Só a tábua IBGE"]};
+  const r=run(p,T_END,1/52,true), r0=run(ib,T_END,1/52,true);
+  const yrs=[0,1,2,3].map(k=>{const a=T_POSSE+k*(T_END-T_POSSE)/4,b=T_POSSE+(k+1)*(T_END-T_POSSE)/4;return{lab:String(2027+k),m:1-survAt(r.curve,b)/survAt(r.curve,a),i:1-survAt(r0.curve,b)/survAt(r0.curve,a)};});
+  const mx=Math.max(0.2,Math.ceil(Math.max(...yrs.map(d=>Math.max(d.m,d.i)))*20)/20);
+  const y=v=>m.t+ih*(1-v/mx);
+  for(let v=0;v<=mx+1e-9;v+=0.05){svg.appendChild(el("line",{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),stroke:css("--rule")}));svg.appendChild(el("text",{x:m.l-6,y:y(v)+4,"text-anchor":"end"},Math.round(v*100)+"%"));}
+  const bw=iw/4;
+  yrs.forEach((d,k)=>{const x0=m.l+k*bw+bw*0.16,w=bw*0.32;
+    svg.appendChild(el("rect",{x:x0,y:y(d.i),width:w,height:y(0)-y(d.i),fill:css("--rule")}));
+    svg.appendChild(el("rect",{x:x0+w+2,y:y(d.m),width:w,height:y(0)-y(d.m),fill:css("--hazard")}));
+    svg.appendChild(el("text",{x:x0+w+2+w/2,y:y(d.m)-5,"text-anchor":"middle",class:"lbl",style:"font-size:11px"},fN(d.m*100,1)));
+    svg.appendChild(el("text",{x:m.l+k*bw+bw/2,y:H-10,"text-anchor":"middle"},d.lab));
+  });
+  svg.appendChild(el("rect",{x:m.l,y:4,width:10,height:8,fill:css("--rule")}));svg.appendChild(el("text",{x:m.l+14,y:12},"IBGE puro"));
+  svg.appendChild(el("rect",{x:m.l+90,y:4,width:10,height:8,fill:css("--hazard")}));svg.appendChild(el("text",{x:m.l+104,y:12},"Modelo (%)"));
+}
+
+function drawHist(vals, point){
+  const svg=document.getElementById("histChart"); svg.innerHTML="";
+  const W=360,H=250,m={l:12,r:12,t:16,b:34},iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const lo=Math.max(0,Math.floor(pct(vals,0.002)*50)/50), hi=Math.min(1,Math.ceil(pct(vals,0.998)*50)/50+0.0001);
+  const nb=28, bins=new Array(nb).fill(0); for(const v of vals){let i=Math.floor((v-lo)/(hi-lo)*nb);if(i>=0&&i<nb)bins[i]++;}
+  const mx=Math.max(...bins,1), x=v=>m.l+(v-lo)/(hi-lo)*iw;
+  const p5=pct(vals,.05),p95=pct(vals,.95);
+  bins.forEach((c,i)=>{const v0=lo+(hi-lo)*i/nb,v1=lo+(hi-lo)*(i+1)/nb,inCI=(v1>p5&&v0<p95);svg.appendChild(el("rect",{x:x(v0)+0.5,y:m.t+ih*(1-c/mx),width:Math.max(0,x(v1)-x(v0)-1),height:ih*c/mx,fill:inCI?css("--hazard"):css("--hazard-soft")}));});
+  svg.appendChild(el("line",{x1:m.l,x2:W-m.r,y1:m.t+ih,y2:m.t+ih,stroke:css("--muted")}));
+  const step = (hi-lo)>0.3?0.1:0.05;
+  for(let v=Math.ceil(lo/step)*step;v<=hi+1e-9;v+=step){svg.appendChild(el("text",{x:x(v),y:H-14,"text-anchor":"middle"},Math.round(v*100)+"%"));}
+  svg.appendChild(el("line",{x1:x(point),x2:x(point),y1:m.t-4,y2:m.t+ih,stroke:css("--ink"),"stroke-width":1.5,"stroke-dasharray":"3 3"}));
+  svg.appendChild(el("text",{x:Math.min(x(point)+5,W-90),y:m.t+6,class:"lbl"},"central "+fP(point)));
+  svg.appendChild(el("text",{x:W/2,y:H-1,"text-anchor":"middle",style:"font-size:10px"},"Prob. de óbito no mandato · faixa escura = IC 90%"));
+}
+
+function termP(p){const r=run(p,T_END,1/26,false);return 1-r.sE/r.sP;}
+function drawTornado(p, center){
+  const svg=document.getElementById("tornado"); svg.innerHTML="";
+  const items = ALL.filter(c=>c.id!=="sig").map(c=>{const a=termP({...p,[c.id]:c.min}),b=termP({...p,[c.id]:c.max});return{c,lo:Math.min(a,b),hi:Math.max(a,b),atMin:a,atMax:b};}).sort((u,v)=>(v.hi-v.lo)-(u.hi-u.lo));
+  const W=760,rowH=32,m={l:250,r:60,t:24,b:28},H=m.t+m.b+rowH*items.length; svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  const lo=Math.min(...items.map(i=>i.lo)),hi=Math.max(...items.map(i=>i.hi));
+  const a=Math.floor(lo*20)/20,b=Math.ceil(hi*20)/20, iw=W-m.l-m.r, x=v=>m.l+(v-a)/(b-a)*iw;
+  for(let v=a;v<=b+1e-9;v+=0.05){svg.appendChild(el("line",{x1:x(v),x2:x(v),y1:m.t-6,y2:H-m.b,stroke:css("--rule")}));svg.appendChild(el("text",{x:x(v),y:H-8,"text-anchor":"middle"},Math.round(v*100)+"%"));}
+  items.forEach((it,i)=>{const yy=m.t+i*rowH;
+    const lab=it.c.label.length>34?it.c.label.slice(0,33)+"…":it.c.label;
+    svg.appendChild(el("text",{x:m.l-10,y:yy+rowH/2+4,"text-anchor":"end",class:"lbl"},lab));
+    // decreasing side (blue) and increasing side (red)
+    svg.appendChild(el("rect",{x:x(it.lo),y:yy+6,width:Math.max(1,x(center)-x(it.lo)),height:rowH-12,fill:css("--safe"),opacity:.8}));
+    svg.appendChild(el("rect",{x:x(center),y:yy+6,width:Math.max(1,x(it.hi)-x(center)),height:rowH-12,fill:css("--hazard"),opacity:.85}));
+    svg.appendChild(el("text",{x:x(it.hi)+6,y:yy+rowH/2+4},fN(it.hi*100,1)));
+    svg.appendChild(el("text",{x:x(it.lo)-6,y:yy+rowH/2+4,"text-anchor":"end"},fN(it.lo*100,1)));
+  });
+  svg.appendChild(el("line",{x1:x(center),x2:x(center),y1:m.t-10,y2:H-m.b,stroke:css("--ink"),"stroke-width":1.5}));
+  svg.appendChild(el("text",{x:x(center),y:m.t-12,"text-anchor":"middle",class:"lbl",style:"font-weight:600"},"atual "+fP(center)));
+}
+
+function drawBench(model, ibge){
+  const svg=document.getElementById("benchChart"); svg.innerHTML="";
+  const rows=[
+    {l:"Lula — este modelo",v:model,c:css("--hazard"),bold:1},
+    {l:"Homem brasileiro médio, 81 anos (IBGE 2024)",v:ibge,c:css("--muted")},
+    {l:"Biden 2024, até 86 anos (Brookings, tábua SSA)",v:0.33,c:css("--rule")},
+    {l:"Biden/Trump 2024 (Olshansky, ~75% sobrevivem)",v:0.25,c:css("--rule")},
+    {l:"Trump 2024 (Brookings, tábua SSA)",v:0.27,c:css("--rule")}
+  ];
+  const W=760,rowH=36,m={l:330,r:60,t:6,b:10},iw=W-m.l-m.r,mx=Math.max(0.5,Math.ceil(Math.max(...rows.map(r=>r.v))*10)/10);
+  rows.forEach((r,i)=>{const yy=m.t+i*rowH;
+    svg.appendChild(el("text",{x:m.l-10,y:yy+rowH/2+4,"text-anchor":"end",class:"lbl",style:r.bold?"font-weight:600":""},r.l));
+    svg.appendChild(el("rect",{x:m.l,y:yy+8,width:iw*r.v/mx,height:rowH-16,fill:r.c,rx:2}));
+    svg.appendChild(el("text",{x:m.l+iw*r.v/mx+6,y:yy+rowH/2+4,style:r.bold?"fill:var(--ink);font-weight:500":""},fP(r.v)));
+  });
+}
+
+function drawTable(p){
+  const h=totalHR(p), imp=p.imp/100, rows=[];
+  for(let k=0;k<5;k++){const age=81+k, tm=k+0.5, calY=T0_CAL+tm;
+    const qI=Q[age]/1000;
+    const off= tm<T_END?h.office:1;
+    const mu=h.pre*off*p.cal*MU[age]*Math.pow(1-imp,calY-2024.5)+p.ext/100;
+    rows.push({age,qI,q:1-Math.exp(-mu),hr:mu/MU[age]});
+  }
+  let l=100000;
+  const html=["<thead><tr><th>Idade x</th><th>Período</th><th>q<sub>x</sub> IBGE (‰)</th><th>HR efetivo</th><th>q<sub>x</sub> ajustado (‰)</th><th>l<sub>x</sub></th><th>d<sub>x</sub></th></tr></thead><tbody>"];
+  rows.forEach(r=>{const d=l*r.q;html.push(`<tr><td>${r.age}</td><td>out/${2026+r.age-81} – out/${2027+r.age-81}</td><td>${fN(r.qI*1000,1)}</td><td>${fN(r.hr,2)}</td><td>${fN(r.q*1000,1)}</td><td>${Math.round(l).toLocaleString("pt-BR")}</td><td>${Math.round(d).toLocaleString("pt-BR")}</td></tr>`);l-=d;});
+  html.push("</tbody>");
+  document.getElementById("lifeTable").innerHTML=html.join("");
+}
+
+// ---------- Update ----------
+let lastMC=null;
+function update(){
+  raf=null;
+  const h=totalHR(P);
+  document.getElementById("hrTotal").textContent = "×"+fN(h.pre*h.office*P.cal,2);
+  const r=run(P,10,1/52,true), rLE=run(P,40,1/12,false);
+  const ib=PRESETS["Só a tábua IBGE"], r0=run(ib,10,1/52,true), r0LE=run(ib,40,1/12,false);
+  const pTerm=1-r.sE/r.sP, pIb=1-r0.sE/r0.sP;
+  const mc=monteCarlo(P,P.sig>0?2000:1);
+  const p5=pct(mc.out,.05),p95=pct(mc.out,.95);
+  document.getElementById("rTerm").textContent=fP(pTerm);
+  document.getElementById("rTermCI").textContent= P.sig>0 ? `IC 90%: ${fP(p5)} – ${fP(p95)}` : "IC 90%: sem incerteza (σ = 0)";
+  document.getElementById("rSurv").textContent=fP(1-pTerm);
+  document.getElementById("rPre").textContent=fP(1-r.sP);
+  document.getElementById("rLE").textContent=fY(rLE.le);
+  document.getElementById("rLE2").textContent="IBGE puro: "+fY(r0LE.le)+" (tábua: 7,8)";
+  document.getElementById("rRef").textContent="Homem médio 81 anos (IBGE): "+fP(pIb);
+  document.getElementById("mFill").style.width=Math.min(100,pTerm*100/0.6)+"%";
+  document.getElementById("mMark").style.left=Math.min(100,pIb*100/0.6)+"%";
+  // band from MC curves (monthly)
+  let band=null;
+  if(P.sig>0){const n=mc.curves[0].length;band={lo:[],hi:[]};for(let j=0;j<n;j++){const col=mc.curves.map(c=>c[j][1]);band.lo.push([mc.curves[0][j][0],pct(col,.05)]);band.hi.push([mc.curves[0][j][0],pct(col,.95)]);}}
+  drawSurvival(r.curve, r0.curve, band);
+  drawYears(P);
+  drawHist(mc.out, pTerm);
+  drawTornado(P, pTerm);
+  drawBench(pTerm, pIb);
+  drawTable(P);
+}
+syncInputs(); markPreset(); update();
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",update);
+new MutationObserver(update).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+})();
+</script>
+
+</body>
+</html>
